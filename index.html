@@ -1,0 +1,303 @@
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/maps/modules/map.js"></script>
+<script src="https://code.highcharts.com/maps/modules/accessibility.js"></script>
+
+<!-- Flag sprites service provided by Martijn Lafeber, https://github.com/lafeber/world-flags-sprite/blob/master/LICENSE -->
+<link rel="stylesheet" type="text/css" href="//github.com/downloads/lafeber/world-flags-sprite/flags32.css" />
+
+<!-- 90% of credit goes to highcharts: https://www.highcharts.com/-->
+<link rel="stylesheet" type="text/css" href="//github.com/downloads/lafeber/world-flags-sprite/flags32.css" />
+<style>
+    * {
+        font-family: sans-serif;
+    }
+
+    #wrapper {
+        width: 100vw;
+        min-height: 70vh;
+        margin: 0 auto;
+        padding: 0;
+        overflow: visible;
+    }
+
+    #container {
+        float: left;
+        width: 60vw;
+        min-height: 70vh;
+        margin: 0;
+    }
+
+    #info {
+        float: left;
+        width: 30vw;
+        padding-left: 20px;
+        margin: 100px 0 0;
+        border-left: 1px solid silver;
+    }
+
+    #info h2 {
+        display: inline;
+        font-size: 13pt;
+    }
+
+    #info .f32 .flag {
+        vertical-align: bottom !important;
+    }
+
+    #info h4 {
+        margin: 1em 0 0;
+    }
+
+    @media screen and (max-width: 920px) {
+
+        #wrapper,
+        #container,
+        #info {
+            float: none;
+            width: 100%;
+            height: auto;
+            margin: 0.5em 0;
+            padding: 0;
+            border: none;
+        }
+    }
+</style>
+
+<script>
+    (async () => {
+        https://stackoverflow.com/questions/4413590/javascript-get-array-of-dates-between-2-dates
+        var getDaysArray = function(s,e) {for(var a=[],d=new Date(s);d<=new Date(e);d.setDate(d.getDate()+1)){ a.push(new Date(d));}return a;};
+        date_range = getDaysArray("2022-04-20", Date.now());
+
+        const topology = await fetch(
+            'https://code.highcharts.com/mapdata/custom/world.topo.json'
+        ).then(response => response.json());
+
+        const csv = await fetch(
+            'https://docs.google.com/spreadsheets/d/1CEBhao3rMe-qtCbAgJTn5ZKQMRFWeAeaiXFpBY3gbHE/gviz/tq?tqx=out:csv&sheet=Monkeypox_Public_www.global.health'
+        ).then(response => response.text());
+
+        const CSVtoArray = text => text.replace(/^"/, '')
+            .replace(/",$/, '')
+            .split('","');
+
+        const csvArr = csv.split(/\n/),
+            countries = {},
+            numRegex = /^[0-9\.]+$/,
+            lastCommaRegex = /,\s$/,
+            quoteRegex = /\"/g,
+            categories = CSVtoArray(csvArr[2]).slice(4);
+
+        let countryChart;
+
+        // Parse the CSV into arrays, one array each country
+        csvArr.forEach(function (line) {
+            line = CSVtoArray(line)
+            let name = line[4]
+            if (name == "United States") {
+                name = "United States of America"
+            }
+            if (countries[name] == undefined) {
+                countries[name] = {}
+            }
+            let date = null;
+            for (let date_ind of [7, 8, 28, 13, 11]) {
+                if (line[date_ind] != "") {
+                    date = Date.parse(line[date_ind]);
+                    break;
+                }
+            }
+            if (countries[name][date] == undefined) {
+                countries[name][date] = 0
+            }
+            countries[name][date] += 1
+        });
+
+        countries_total = []
+
+        for (const name in countries) {
+            total = 0
+            for (let date in countries[name]) {
+                date = Number(date)
+                total += countries[name][date]
+                if (date === null) {
+                    delete countries[name][date]
+                }
+            }
+            countries_total.push({ name: name, value: total });
+        }
+
+        // Add lower case codes to the data set for inclusion in the tooltip.pointFormat
+        const mapData = Highcharts.geojson(topology);
+        mapData.forEach(function (country) {
+            country.id = country.properties['hc-key']; // for Chart.get()
+            country.flag = country.id.replace('UK', 'GB').toLowerCase();
+        });
+
+        // Wrap point.select to get to the total selected points
+        Highcharts.wrap(Highcharts.Point.prototype, 'select', function (proceed) {
+
+            proceed.apply(this, Array.prototype.slice.call(arguments, 1));
+
+            const points = mapChart.getSelectedPoints();
+            if (points.length) {
+                if (points.length === 1) {
+                    document.querySelector('#info #flag')
+                        .className = 'flag ' + points[0].flag;
+                    document.querySelector('#info h2').innerHTML = points[0].name;
+                } else {
+                    document.querySelector('#info #flag')
+                        .className = 'flag';
+                    document.querySelector('#info h2').innerHTML = 'Comparing countries';
+
+                }
+                document.querySelector('#info .subheader')
+                    .innerHTML = '<h4>Monkyepox cases each date</h4><small><em>Shift + Click on map to compare countries</em></small>';
+
+                if (!countryChart) {
+                    countryChart = Highcharts.chart('country-chart', {
+                        chart: {
+                            height: 250,
+                            spacingLeft: 0
+                        },
+                        credits: {
+                            enabled: false
+                        },
+                        title: {
+                            text: null
+                        },
+                        subtitle: {
+                            text: null
+                        },
+                        xAxis: {  
+                            tickInterval:  24 * 3600 * 1000,
+                            type: 'datetime',
+                            startOnTick: true,
+                            startOfWeek: 0,
+                            labels: {
+                                format: '{value:%d/%m/%Y}',
+                                rotation: -45,
+                                y: 30,
+                                align: 'center'
+                            } 
+                        },
+                        yAxis: {
+                            title: null,
+                            opposite: true
+                        },
+                        tooltip: {
+                            split: true
+                        },
+                        plotOptions: {
+                            series: {
+                                animation: {
+                                    duration: 500
+                                },
+                                marker: {
+                                    enabled: false
+                                }
+                            }
+                        }
+                    });
+                }
+
+                countryChart.series.slice(0).forEach(function (s) {
+                    s.remove(false);
+                });
+                points.forEach(function (p) {
+                    let name = p.name
+                    if (countries[name] != undefined) {
+                        arr = []
+                        for (let date of date_range) {
+                            date = Number(date)
+                            if (countries[name][date] == undefined) {
+                                arr.push({x: date, y: 0});
+                            } else {
+                                arr.push({x: date, y: countries[name][date]})
+                            }
+                        }
+                        const d = {
+                            name: name,
+                            data: arr,
+                            type: points.length > 1 ? 'line' : 'area'
+                        }
+                        if (countries[name] != undefined) {
+                            countryChart.addSeries(d, false);
+                        }
+                    } else {
+                        console.log(`Can't find name ${name} in ${Object.keys(countries)}`);
+                    }
+                });
+                countryChart.redraw();
+
+            } else {
+                document.querySelector('#info #flag').className = '';
+                document.querySelector('#info h2').innerHTML = '';
+                document.querySelector('#info .subheader').innerHTML = '';
+                if (countryChart) {
+                    countryChart = countryChart.destroy();
+                }
+            }
+        });
+
+        // Initiate the map chart
+        const mapChart = Highcharts.mapChart('container', {
+
+            chart: {
+                map: topology
+            },
+
+            title: {
+                text: 'Monkeypox cases per country'
+            },
+
+            subtitle: {
+                text: 'Source: <a href="https://docs.google.com/spreadsheets/d/1CEBhao3rMe-qtCbAgJTn5ZKQMRFWeAeaiXFpBY3gbHE/edit#gid=0">Global.health</a>'
+            },
+
+            mapNavigation: {
+                enabled: true,
+                buttonOptions: {
+                    verticalAlign: 'bottom'
+                }
+            },
+
+            colorAxis: {
+                type: 'logarithmic',
+                endOnTick: false,
+                startOnTick: false,
+                min: 1
+            },
+
+            tooltip: {
+                footerFormat: '<span style="font-size: 10px">(Click for details)</span>'
+            },
+
+            series: [{
+                data: countries_total,
+                mapData: mapData,
+                joinBy: ['name'],
+                name: 'Monkeypox cases each day',
+                allowPointSelect: true,
+                cursor: 'pointer',
+                states: {
+                    select: {
+                        color: '#cc1dba',
+                        borderColor: 'black',
+                        dashStyle: 'shortdot'
+                    }
+                },
+                borderWidth: 0.5
+            }]
+        });
+    })();
+</script>
+<div id="wrapper">
+    <div id="container"></div>
+    <div id="info">
+        <span class="f32"><span id="flag"></span></span>
+        <h2></h2>
+        <div class="subheader">Click countries to view history</div>
+        <div id="country-chart"></div>
+    </div>
+</div>
