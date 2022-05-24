@@ -66,7 +66,7 @@
 <script>
     (async () => {
         https://stackoverflow.com/questions/4413590/javascript-get-array-of-dates-between-2-dates
-        var getDaysArray = function(s,e) {for(var a=[],d=new Date(s);d<=new Date(e);d.setDate(d.getDate()+1)){ a.push(new Date(d));}return a;};
+        var getDaysArray = function (s, e) { for (var a = [], d = new Date(s); d <= new Date(e); d.setDate(d.getDate() + 1)) { a.push(new Date(d)); } return a; };
         date_range = getDaysArray("2022-04-20", Date.now());
 
         const topology = await fetch(
@@ -96,6 +96,9 @@
             let name = line[4]
             if (name == "United States") {
                 name = "United States of America"
+            }
+            if (name == "United Kingdom" || name == "England" || name == "Scotland" || name == "UK" || name == "GB" || name == "Great Britan") {
+                name = "United Kingdom"
             }
             if (countries[name] == undefined) {
                 countries[name] = {}
@@ -169,8 +172,8 @@
                         subtitle: {
                             text: null
                         },
-                        xAxis: {  
-                            tickInterval:  24 * 3600 * 1000,
+                        xAxis: {
+                            tickInterval: 24 * 3600 * 1000,
                             type: 'datetime',
                             startOnTick: true,
                             startOfWeek: 0,
@@ -179,7 +182,7 @@
                                 rotation: -45,
                                 y: 30,
                                 align: 'center'
-                            } 
+                            }
                         },
                         yAxis: {
                             title: null,
@@ -211,9 +214,9 @@
                         for (let date of date_range) {
                             date = Number(date)
                             if (countries[name][date] == undefined) {
-                                arr.push({x: date, y: 0});
+                                arr.push({ x: date, y: 0 });
                             } else {
-                                arr.push({x: date, y: countries[name][date]})
+                                arr.push({ x: date, y: countries[name][date] })
                             }
                         }
                         const d = {
@@ -252,7 +255,7 @@
             },
 
             subtitle: {
-                text: 'Source: <a href="https://docs.google.com/spreadsheets/d/1CEBhao3rMe-qtCbAgJTn5ZKQMRFWeAeaiXFpBY3gbHE/edit#gid=0">Global.health</a>'
+                text: '<a href="https://github.com/George3d6/Monkeypox-Dashboard">Source here</a>, Data From: <a href="https://docs.google.com/spreadsheets/d/1CEBhao3rMe-qtCbAgJTn5ZKQMRFWeAeaiXFpBY3gbHE/edit#gid=0">Global.health</a>'
             },
 
             mapNavigation: {
