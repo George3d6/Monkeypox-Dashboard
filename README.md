@@ -1,5 +1,7 @@
 # Monkeypox Dashboard
 
+[View here](https://george3d6.github.io/Monkeypox-Dashboard/)
+
 Quick visualization of the [global.health](https://global.health/) monkeypox [tracking spreadsheet](https://docs.google.com/spreadsheets/d/1CEBhao3rMe-qtCbAgJTn5ZKQMRFWeAeaiXFpBY3gbHE/edit#gid=0).
 
 ## Discalimer
